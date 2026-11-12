@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IAT WhatsApp → Odoo (phone)</title>
+<meta name="theme-color" content="#111827">
+<style>
+:root{--bg:#f4f6f5;--card:#fff;--txt:#17211d;--mut:#66736d;--line:#dde3e0;--teal:#0b7a66;--bad:#b3261e;--warn:#9a6700;--ok:#1a7f37}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line)}
+.hb{padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+h1{font-size:1rem;margin:0;flex:1}h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);margin:20px 0 8px}
+nav{display:flex;overflow-x:auto;border-top:1px solid var(--line)}
+nav button{flex:1;border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:9px 12px;font-weight:600;color:var(--mut);white-space:nowrap}
+nav button.on{color:var(--teal);border-bottom-color:var(--teal)}
+main{max-width:860px;margin:0 auto;padding:6px 14px 60px}
+.pill{font-size:.75rem;font-weight:700;padding:3px 9px;border-radius:99px;border:1px solid}
+.prev{color:var(--warn);border-color:var(--warn)}.live{color:#fff;background:var(--bad);border-color:var(--bad)}
+button{font:inherit;font-size:.85rem;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--txt);cursor:pointer}
+button.pri{background:var(--teal);border-color:var(--teal);color:#fff}button.sm{padding:3px 9px;font-size:.78rem}button.del{color:var(--bad)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:8px}
+.top{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.top b{font-size:.95rem}
+.mut{color:var(--mut);font-size:.8rem}.tag{font-size:.72rem;border:1px solid var(--line);border-radius:5px;padding:0 5px;color:var(--mut);white-space:nowrap}
+.tag.ed{color:var(--warn);border-color:var(--warn)}.tag.x{color:var(--bad);border-color:var(--bad)}
+.so{margin-left:auto;font-weight:700;color:var(--ok);font-size:.82rem}.would{margin-left:auto;color:var(--warn);font-size:.78rem}
+table{border-collapse:collapse;width:100%;margin-top:6px;font-size:.86rem}td,th{padding:3px 4px 3px 0;border-top:1px dashed var(--line);text-align:left;vertical-align:top}
+th{font-size:.72rem;color:var(--mut);border-top:0;font-weight:600}td.q,th.q{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.w{color:var(--warn);font-size:.8rem;margin-top:5px}.b{color:var(--bad)}.g{color:var(--ok)}.note{font-size:.8rem;color:var(--mut);margin-top:5px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+select,input,textarea{font:inherit;font-size:.9rem;padding:7px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--txt);max-width:100%}
+textarea{width:100%;min-height:110px}
+.log div{font-size:.8rem;padding:2px 0;border-top:1px dashed var(--line)}.log .ok{color:var(--ok)}.log .bad{color:var(--bad)}.log .warn{color:var(--warn)}
+.ov{position:fixed;inset:0;background:#0007;display:none;align-items:flex-start;justify-content:center;padding:30px 12px;z-index:9;overflow:auto}
+.ov .card{width:100%;max-width:520px}#res button{display:block;width:100%;text-align:left;margin-top:6px}
+#err{background:var(--bad);color:#fff;padding:8px 14px;display:none;font-size:.85rem}
+pre{white-space:pre-wrap;background:var(--bg);border-radius:8px;padding:8px;font:inherit;font-size:.82rem;margin:6px 0}
+details{margin-bottom:8px}summary{cursor:pointer;font-weight:600;padding:10px 13px;background:var(--card);border:1px solid var(--line);border-radius:10px}
+details[open] summary{margin-bottom:8px}.el input{width:100%}.el td{border:0;padding:2px 4px 2px 0}
+.tab{display:none}.tab.on{display:block}
+
+#lg{position:fixed;inset:0;background:#f3f4f6;z-index:99;display:none;align-items:center;justify-content:center;padding:16px}
+#lg .card{max-width:340px;width:100%}#lg input{width:100%;margin:6px 0;padding:10px;font-size:16px;box-sizing:border-box}
+#cs{font-size:12px;padding:4px 10px;text-align:center}#cs.up{background:#dcfce7;color:#166534}#cs.down{background:#fee2e2;color:#991b1b}
+#busy{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:#111827;color:#fff;padding:8px 14px;border-radius:20px;font-size:13px;display:none;z-index:98}
+</style></head><body>
+<div id="lg"><div class="card"><b>IAT WhatsApp → Odoo</b><div class="mut">Sign in once on this phone.</div><input id="le" type="email" placeholder="Email" autocomplete="username"><input id="lp" type="password" placeholder="Password" autocomplete="current-password"><div id="lerr" style="color:#b91c1c;font-size:13px;min-height:18px"></div><button class="pri" id="lb" style="width:100%;padding:10px">Sign in</button></div></div>
+<div id="busy">Sending to the laptop…</div>
+<header><div class="hb"><h1>IAT WhatsApp → Odoo</h1><span id="mode" class="pill prev">…</span><button id="modeBtn" onclick="toggleLive()">…</button></div>
+<nav><button data-t="orders" class="on">Orders</button><button data-t="history">History</button><button data-t="names">Names</button><button data-t="inventory">Inventory</button></nav></header>
+<div id="cs">Connecting…</div>
+<div id="err"></div>
+<main>
+<section id="t-orders" class="tab on">
+<div class="mut" id="info" style="margin-top:8px"></div>
+<div id="alerts"></div>
+<h2>Names to match <span id="pc"></span></h2><div id="pend"></div>
+<h2>Quotations <span id="qc"></span></h2><div id="rows"></div>
+<h2>Orders without a quotation</h2><div id="other"></div>
+<h2>Drivers not placed <span id="dc"></span></h2><div id="drv"></div>
+<h2>Paste a message</h2>
+<div class="card"><div class="bar"><select id="pg"><option value="nextday">Next Day group</option><option value="tender">Tender group</option><option value="fresh">Fresh group</option><option value="drivers">Drivers message</option></select>
+<button class="pri" onclick="paste()">Read it</button><button onclick="clearTest()">Clear test messages</button></div>
+<textarea id="pt" style="margin-top:8px" placeholder="Paste one message (customer on the first line). Several messages: put a line with --- between them."></textarea>
+<div class="bar" style="margin-top:8px"><span class="mut">Date for next-day / tender orders:</span><input type="date" id="dt"><button onclick="setDate()">Set</button></div></div>
+<h2>Messages that were not read as orders</h2><div id="unread" class="card log"></div>
+<h2>What it did</h2><div id="log" class="card log"></div>
+</section>
+
+<section id="t-history" class="tab"><div class="mut" style="margin:10px 0">Every delivery day: its quotations and everything that was added, changed, edited or cancelled.</div><div id="hist"></div></section>
+
+<section id="t-names" class="tab">
+<div class="bar" style="margin-top:10px"><input id="nf" placeholder="Filter…" style="flex:1" oninput="renderNames()"></div>
+<h2>Customers <span id="nc1"></span></h2><div id="ncust" class="card"></div>
+<h2>Products <span id="nc2"></span></h2><div id="nprod" class="card"></div>
+<h2>No invoice (ignored customers)</h2><div class="card"><div id="nign"></div>
+<div class="bar" style="margin-top:8px"><input id="ni" placeholder="Name as written in the order" style="flex:1"><button onclick="ign($('ni').value,true)">Add</button></div></div>
+</section>
+
+<section id="t-inventory" class="tab">
+<h2>Inventory count → Odoo</h2>
+<div class="card"><div class="bar"><input type="file" id="invf" accept=".xlsx,.xlsm"><select id="invl"></select></div>
+<div class="bar" style="margin-top:8px"><span class="mut">Inventory date:</span><input type="date" id="invd"><button class="pri" onclick="invPreview(true)">Preview</button></div></div>
+<div id="invr"></div>
+<h2>Sent before</h2><div id="invh" class="card log"></div>
+</section>
+</main>
+
+<div id="ov" class="ov" onclick="if(event.target.id=='ov')closeM()"><div class="card"><b id="mt"></b><div class="mut" id="ms"></div>
+<div class="bar" style="margin-top:8px"><input id="mq" style="flex:1" placeholder="Search in Odoo…" onkeydown="if(event.key=='Enter')srch()"><button class="pri" onclick="srch()">Search</button></div>
+<div id="res"></div><div style="margin-top:10px;text-align:right"><button onclick="closeM()">Close</button></div></div></div>
+
+<div id="eo" class="ov"><div class="card"><b>Edit order</b><div class="mut">Change what was read. The quotation in Odoo follows (drafts only).</div>
+<div id="eb"></div><datalist id="plist"></datalist>
+<div class="bar" style="margin-top:12px;justify-content:flex-end"><button onclick="$('eo').style.display='none'">Close</button><button class="pri" onclick="saveEdit()">Save</button></div></div></div>
+
+<script>
+let S=null,M=null,NAMES=null,E=null,INV=null;
+const $=id=>document.getElementById(id),esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(path,body,raw){await window.cloudReady;return window.cloudApi(path,body,raw)}
+function showErr(t){const e=$('err');e.textContent=t;e.style.display=t?'block':'none';if(t)window.scrollTo(0,0)}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
+function tab(t){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==t));
+  document.querySelectorAll('.tab').forEach(s=>s.classList.toggle('on',s.id=='t-'+t));showErr('');
+  if(t=='history')loadHist();if(t=='names')loadNames();if(t=='inventory')loadInv();if(t=='orders')load()}
+const curTab=()=>document.querySelector('nav button.on').dataset.t;
+
+/* ---------- orders ---------- */
+async function load(){try{render(await api('/api/state'))}catch(e){}}
+function render(s){S=s;showErr(s.odoo_error?('Odoo: '+s.odoo_error):'');
+  $('mode').textContent=s.live?'LIVE':'PREVIEW';$('mode').className='pill '+(s.live?'live':'prev');
+  $('modeBtn').textContent=s.live?'Back to Preview':'Go live';
+  const d=s.dates||{};$('info').innerHTML=(s.live?'Quotations are being made in Odoo.':'Preview: nothing is sent to Odoo. This shows what would be made.')+
+    '<br>Dates — next day: <b>'+esc(d.nextday||'not seen yet')+'</b> · tender: <b>'+esc(d.tender||'not seen yet')+'</b> · fresh: <b>'+esc(s.today)+'</b> · checked '+esc(s.last_run||'-');
+  $('alerts').innerHTML=s.alerts.map(a=>'<div class="card b">⚠ '+esc(a.text)+' <span class="mut">'+esc(a.time)+'</span></div>').join('')+
+    (s.alerts.length?'<div style="text-align:right;margin-bottom:8px"><button class="sm" onclick="clearAlerts()">Clear alerts</button></div>':'');
+  const seen={},pend=[];
+  s.other.forEach(o=>(o.missing||[]).forEach(m=>{const k=m.kind+'|'+m.raw;if(!seen[k]){seen[k]=1;pend.push({...m,where:o.token+' '+o.cust})}}));
+  $('pc').textContent=pend.length?'('+pend.length+')':'';
+  $('pend').innerHTML=pend.map((m,i)=>'<div class="card"><div class="top"><span class="tag">'+m.kind+'</span><b>'+esc(m.raw)+'</b><span class="mut">'+esc(m.where)+'</span></div><div class="bar" style="margin-top:6px">'+
+    (m.suggest?'<button class="pri sm" onclick="saveMap('+i+')">It is “'+esc(m.suggest.name)+'”</button>':'')+'<button class="sm" onclick="openM(_pend['+i+'])">Match in Odoo</button></div></div>').join('')||'<div class="mut">None.</div>';
+  window._pend=pend;
+  $('qc').textContent='('+s.rows.length+')';
+  $('rows').innerHTML=s.rows.map((r,ri)=>'<div class="card"><div class="top"><b>'+esc(r.customer)+'</b>'+(r.po?'<span class="tag">PO '+esc(r.po)+'</span>':'')+
+    '<span class="tag">'+esc(r.date)+'</span>'+r.tokens.map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+(r.edited?'<span class="tag ed">edited</span>':'')+
+    (r.so?'<span class="so">'+esc(r.so)+(r.status=='alert'?' ⚠':'')+'</span>':'<span class="would">'+(r.failed?'failed – retrying':s.live?'making…':'would be made')+'</span>')+'</div>'+
+    '<div class="mut">'+esc(r.custs.join(' / '))+'</div>'+linesTable(r.lines)+
+    (r.notes.length?'<div class="note">Notes: '+esc(r.notes.join(' · '))+'</div>':'')+(r.warns.length?'<div class="w">⚠ '+esc(r.warns.join(' · '))+'</div>':'')+
+    '<div class="bar" style="margin-top:7px"><button class="sm pri" onclick="openEdit(S.rows['+ri+'].msgs)">Edit</button>'+
+    (r.so&&s.driver_opts.length?'<select onchange="setDrv(\''+esc(r.key)+'\',this.value)"><option value="">'+(r.driver?'Driver: '+esc(r.driver):'Driver…')+'</option>'+s.driver_opts.map(o=>'<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>').join('')+'</select>':(r.driver?'<span class="tag">Driver: '+esc(r.driver)+'</span>':''))+
+    r.msgs.map((id,k)=>'<button class="sm del" onclick="cancel(\''+esc(id)+'\',true)">Cancel '+esc(r.tokens[k])+'</button>').join('')+'</div></div>').join('')||'<div class="mut">No quotations yet.</div>';
+  const why={pending:'waiting for names',waiting:'tender waiting for the fresh order',cancelled:'cancelled',ignored:'customer marked “no invoice”',existing:'was here before going live (not sent)'};
+  $('other').innerHTML=s.other.map(o=>'<div class="card"><div class="top"><span class="tag">'+esc(o.token)+'</span><b>'+esc(o.cust)+'</b>'+(o.po?'<span class="tag">PO '+esc(o.po)+'</span>':'')+
+    '<span class="tag">'+esc(o.date)+'</span><span class="would">'+esc(why[o.status]||o.status)+'</span></div><div class="mut">'+esc(o.lines.join(' · '))+' — '+esc(o.time)+'</div>'+
+    '<div class="bar" style="margin-top:6px"><button class="sm" onclick="openEdit([\''+esc(o.id)+'\'])">Edit</button>'+
+    (o.status=='cancelled'||o.status=='existing'?'<button class="sm" onclick="cancel(\''+esc(o.id)+'\',false)">'+(o.status=='existing'?'Send it':'Restore')+'</button>':'<button class="sm del" onclick="cancel(\''+esc(o.id)+'\',true)">Cancel</button>')+'</div></div>').join('')+
+    s.gone.filter(g=>g.status!='cancelled').map(g=>'<div class="card b">'+esc(g.name)+': cancel it by hand in Odoo</div>').join('')||'<div class="mut">None.</div>';
+  $('dc').textContent=s.drv_report.length?'('+s.drv_report.length+')':'';
+  $('drv').innerHTML=(s.drv_dates.length?'<div class="mut">Drivers message received for: '+esc(s.drv_dates.slice(-3).join(', '))+'</div>':'<div class="mut">No drivers message yet. It is read from the delivery group, or paste it below (choose “Drivers message”).</div>')+
+    s.drv_report.map(d=>'<div class="card"><div class="top"><span class="tag">'+esc(d.date)+'</span><b>'+esc(d.cust)+'</b><span class="tag">'+esc(d.ref||'')+'</span><span class="tag">'+esc(d.driver)+'</span></div><div class="w">'+esc(d.why)+'</div></div>').join('');
+  $('unread').innerHTML=s.unread.map(u=>'<div><span class="mut">'+esc(u.time)+' '+esc(u.group)+' ('+esc(u.why)+')</span> '+esc(u.body)+'</div>').join('')||'<span class="mut">None.</span>';
+  $('log').innerHTML=s.log.map(l=>'<div class="'+esc(l.kind)+'"><span class="mut">'+esc(l.time)+'</span> '+esc(l.text)+'</div>').join('')||'<span class="mut">Nothing yet.</span>';
+}
+const linesTable=ls=>'<table>'+ls.map(l=>'<tr><td>'+esc(l.name)+'</td><td class="q">'+l.qty+' '+esc(l.uom)+'</td></tr>').join('')+'</table>';
+async function toggleLive(){
+  if(S.live){if(confirm('Back to Preview? Nothing more will be sent to Odoo.'))render(await api('/api/live',{on:false}));return}
+  if(!confirm('GO LIVE: quotations will be made in Odoo.\n\nMake sure automatic quotations are OFF in the first app, or every order gets two quotations.\n\nContinue?'))return;
+  const inc=confirm('Also make quotations for the orders ALREADY on this page?\n\nOK = yes, make them now\nCancel = no, start from the next new message');
+  render(await api('/api/live',{on:true,include_existing:inc}));
+}
+async function paste(){const t=$('pt').value.trim();if(!t)return;render(await api('/api/paste',{group:$('pg').value,text:t}));$('pt').value=''}
+async function clearTest(){if(confirm('Remove the messages on this page (only ones without an Odoo quotation)?'))render(await api('/api/clear',{}))}
+async function clearAlerts(){render(await api('/api/alerts_clear',{}))}
+async function setDate(){if($('dt').value)render(await api('/api/date',{date:$('dt').value}))}
+async function cancel(id,on){if(!on||confirm('Cancel this order? Its lines leave the quotation; a quotation left empty is cancelled in Odoo.'))render(await api('/api/cancel',{id,on}))}
+async function setDrv(key,val){if(val)render(await api('/api/driver',{key,val}))}
+async function saveMap(i){const m=window._pend[i];render(await api('/api/map',{kind:m.kind,raw:m.raw,id:m.suggest.id,name:m.suggest.name}))}
+
+/* ---------- match window (orders, names, inventory) ---------- */
+function openM(m){M=m;$('mt').textContent=m.raw;$('ms').textContent='Pick the '+(m.kind=='customer'?'customer':'product')+' in Odoo. It is remembered.';
+  $('mq').value=String(m.raw).split(' ').slice(0,2).join(' ');$('res').innerHTML='';$('ov').style.display='flex';srch()}
+function closeM(){$('ov').style.display='none'}
+async function srch(){const j=await api('/api/search?kind='+M.kind+'&q='+encodeURIComponent($('mq').value));window._res=j.results;
+  $('res').innerHTML=j.results.map((r,k)=>'<button onclick="pick('+k+')">'+esc(r.name)+'</button>').join('')||'<div class="mut" style="margin-top:8px">Nothing found.</div>'}
+async function pick(k){const r=window._res[k];const j=await api('/api/map',{kind:M.kind,raw:M.raw,id:r.id,name:r.name});closeM();
+  if(M.kind=='inventory')return invPreview(false);
+  if(curTab()=='names')return loadNames();
+  render(j)}
+
+/* ---------- edit an order ---------- */
+async function openEdit(ids){const j=await api('/api/msg?ids='+encodeURIComponent(ids.join(',')));if(!j.msgs.length)return;E=j.msgs;
+  $('plist').innerHTML=j.products.map(p=>'<option value="'+esc(p)+'">').join('');drawEdit();$('eo').style.display='flex'}
+function drawEdit(){$('eb').innerHTML=E.map((m,i)=>'<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:8px"><div class="top"><span class="tag">'+esc(m.token)+'</span><span class="tag">'+esc(m.group)+'</span>'+(m.edited?'<span class="tag ed">edited</span>':'')+'</div>'+
+  '<div class="mut" style="margin-top:6px">The WhatsApp message:</div><pre>'+esc(m.body)+'</pre>'+
+  '<table class="el"><tr><td class="mut">Customer</td><td><input value="'+esc(m.cust)+'" oninput="E['+i+'].cust=this.value"></td></tr>'+
+  '<tr><td class="mut">PO</td><td><input value="'+esc(m.po)+'" oninput="E['+i+'].po=this.value"></td></tr>'+
+  '<tr><td class="mut">Date</td><td><input type="date" value="'+esc(m.date)+'" oninput="E['+i+'].date=this.value"></td></tr></table>'+
+  '<table class="el"><tr><th>Product</th><th style="width:90px">Qty</th><th></th></tr>'+m.lines.map((l,k)=>'<tr><td><input list="plist" value="'+esc(l.prod)+'" oninput="E['+i+'].lines['+k+'].prod=this.value"></td>'+
+  '<td><input type="number" step="any" min="0" value="'+esc(l.qty)+'" oninput="E['+i+'].lines['+k+'].qty=this.value"></td><td><button class="sm del" onclick="E['+i+'].lines.splice('+k+',1);drawEdit()">✕</button></td></tr>').join('')+'</table>'+
+  '<div class="bar" style="margin-top:6px"><button class="sm" onclick="E['+i+'].lines.push({prod:\'\',qty:\'\'});drawEdit()">+ Add a line</button>'+
+  (m.edited?'<button class="sm" onclick="resetEdit('+i+')">Back to the WhatsApp text</button>':'')+'</div></div>').join('')}
+async function saveEdit(){let j;for(const m of E)j=await api('/api/edit',{id:m.id,cust:m.cust,po:m.po,date:m.date,lines:m.lines});$('eo').style.display='none';render(j)}
+async function resetEdit(i){const j=await api('/api/edit',{id:E[i].id,reset:true});$('eo').style.display='none';render(j)}
+
+/* ---------- history ---------- */
+async function loadHist(){let j;try{j=await api('/api/history')}catch(e){return}
+  $('hist').innerHTML=j.days.map((d,i)=>'<details'+(i==0?' open':'')+'><summary>'+esc(d.date)+(d.date==j.today?' (today)':'')+' — '+d.made+' quotation'+(d.made==1?'':'s')+(d.cancelled?', '+d.cancelled+' cancelled':'')+'</summary>'+
+    d.quotes.map(q=>{const x=q.status=='cancelled'||q.status=='alert_cancel';return '<div class="card"><div class="top"><b>'+esc(q.customer)+'</b>'+(q.po?'<span class="tag">PO '+esc(q.po)+'</span>':'')+
+      q.tokens.map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+(q.driver?'<span class="tag">'+esc(q.driver)+'</span>':'')+(q.edited?'<span class="tag ed">edited</span>':'')+(x?'<span class="tag x">cancelled</span>':'')+
+      '<span class="so"'+(x?' style="color:var(--bad);text-decoration:line-through"':'')+'>'+esc(q.so)+'</span></div>'+linesTable(q.lines)+
+      (q.notes&&q.notes.length?'<div class="note">Notes: '+esc(q.notes.join(' · '))+'</div>':'')+'</div>'}).join('')+
+    '<div class="card log"><b style="font-size:.8rem">What happened ('+d.events.length+')</b>'+d.events.map(l=>'<div class="'+esc(l.kind)+'"><span class="mut">'+esc(l.time.slice(5))+'</span> '+esc(l.text)+'</div>').join('')+'</div></details>').join('')||'<div class="mut">Nothing yet. History starts from the first quotation made in LIVE mode.</div>'}
+
+/* ---------- names ---------- */
+async function loadNames(){try{NAMES=await api('/api/names');renderNames()}catch(e){}}
+function renderNames(){if(!NAMES)return;const f=$('nf').value.trim().toLowerCase();
+  const tbl=(kind,list)=>{const rows=list.map((n,i)=>({n,i})).filter(x=>!f||(x.n.raw+' '+x.n.name).toLowerCase().includes(f));
+    return rows.length?'<table><tr><th>As written</th><th>In Odoo</th><th></th></tr>'+rows.map(x=>'<tr><td>'+esc(x.n.raw)+'</td><td>'+esc(x.n.name)+' <span class="tag">'+esc(x.n.source)+'</span></td>'+
+    '<td style="white-space:nowrap"><button class="sm" onclick="openM({kind:\''+kind+'\',raw:NAMES.'+(kind=='customer'?'customers':'products')+'['+x.i+'].raw})">Change</button> <button class="sm del" onclick="unmap(\''+kind+'\','+x.i+')">Remove</button></td></tr>').join('')+'</table>':'<span class="mut">None.</span>'};
+  $('nc1').textContent='('+NAMES.customers.length+')';$('nc2').textContent='('+NAMES.products.length+')';
+  $('ncust').innerHTML=tbl('customer',NAMES.customers);$('nprod').innerHTML=tbl('product',NAMES.products);
+  $('nign').innerHTML=NAMES.ignored.map((n,i)=>'<div class="bar" style="padding:3px 0"><span style="flex:1">'+esc(n)+'</span><button class="sm" onclick="ign(NAMES.ignored['+i+'],false)">Invoice again</button></div>').join('')||'<span class="mut">None.</span>'}
+async function unmap(kind,i){const n=NAMES[kind=='customer'?'customers':'products'][i];if(!confirm('Remove the match of “'+n.raw+'”? Orders with this name will wait under “Names to match”.'))return;NAMES=await api('/api/unmap',{kind,raw:n.raw});renderNames()}
+async function ign(raw,on){if(!String(raw).trim())return;NAMES=await api('/api/ignore',{raw,on});$('ni').value='';renderNames()}
+
+/* ---------- inventory ---------- */
+async function loadInv(){let j;try{j=await api('/api/locations')}catch(e){return}
+  if(!$('invl').options.length)$('invl').innerHTML=j.locations.map(l=>'<option value="'+l.id+'"'+(l.id==j.default?' selected':'')+'>'+esc(l.complete_name)+'</option>').join('');
+  $('invh').innerHTML=j.history.map(h=>'<div class="'+(h.all_ok?'ok':'warn')+'"><span class="mut">'+esc(h.time)+'</span> count of '+esc(h.date)+' — '+h.rows+' products — '+esc(h.file)+(h.all_ok?'':' (check: some did not match)')+'</div>').join('')||'<span class="mut">Nothing yet.</span>'}
+async function invPreview(fresh){
+  const f=$('invf').files[0];let j;
+  if(fresh){if(!f){showErr('Choose the inventory Excel file first.');return}
+    j=await api('/api/inventory/preview',await f.arrayBuffer(),{h:{'X-Filename':encodeURIComponent(f.name),'X-Location':$('invl').value}})}
+  else j=await api('/api/inventory/preview','',{h:{'X-Token':INV.token,'X-Location':$('invl').value}});
+  INV=j;showErr('');if(j.date&&(fresh||!$('invd').value))$('invd').value=String(j.date).slice(0,10);
+  const un=j.rows.filter(r=>!r.odoo).length;
+  $('invr').innerHTML='<h2>Preview — '+j.rows.length+' products'+(un?', '+un+' not matched':'')+'</h2><div class="card"><table><tr><th>Counted product</th><th>Odoo product</th><th class="q">Counted</th><th class="q">In Odoo</th><th class="q">Change</th></tr>'+
+    j.rows.map((r,i)=>'<tr><td>'+esc(r.name)+'</td><td>'+(r.odoo?esc(r.odoo.name)+(r.unit_warning?' <span class="w">unit '+esc(r.unit)+' ≠ '+esc(r.odoo_uom)+'</span>':''):'<button class="sm pri" onclick="openM({kind:\'inventory\',raw:INV.rows['+i+'].name})">Match</button>')+'</td>'+
+    '<td class="q">'+r.qty+'</td><td class="q">'+(r.odoo?r.now:'')+'</td><td class="q '+(r.odoo&&r.diff<0?'b':'g')+'">'+(r.odoo?(r.diff>0?'+':'')+r.diff:'')+'</td></tr>').join('')+'</table>'+
+    '<div class="bar" style="margin-top:10px">'+(un?'<span class="w">Products not matched are skipped.</span>':'')+'<button class="pri" style="margin-left:auto" onclick="invApply()">Apply to Odoo</button></div></div>'}
+async function invApply(){if(!$('invd').value){showErr('Pick the inventory date.');return}
+  if(!confirm('Write these counted quantities to Odoo stock for '+$('invd').value+'?'))return;
+  const j=await api('/api/inventory/apply',{token:INV.token,date:$('invd').value,location:$('invl').value});
+  const bad=j.result.filter(r=>!r.ok).length;
+  $('invr').innerHTML='<h2>Done — '+j.result.length+' products'+(bad?', '+bad+' to check':'')+'</h2><div class="card">'+(j.note?'<div class="w">'+esc(j.note)+'</div>':'')+'<table><tr><th>Product</th><th class="q">Counted</th><th class="q">Odoo now</th><th></th></tr>'+
+    j.result.map(r=>'<tr><td>'+esc(r.odoo)+'</td><td class="q">'+r.counted+'</td><td class="q">'+r.now+'</td><td class="'+(r.ok?'g':'b')+'">'+(r.ok?'✓':'check')+'</td></tr>').join('')+'</table></div>';
+  $('invf').value='';loadInv()}
+
+window.cloudOnState=()=>{if(S===null||(curTab()=='orders'&&$('ov').style.display!='flex'&&$('eo').style.display!='flex'&&!$('pt').value))load()};
+</script>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {getFirestore,doc,collection,addDoc,onSnapshot,deleteDoc,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const app=initializeApp({apiKey:"AIzaSyCHBTdBY46ss-AismCgkKNXPMflexJiNoE",authDomain:"iat-wa-orders.firebaseapp.com",projectId:"iat-wa-orders",
+  storageBucket:"iat-wa-orders.firebasestorage.app",messagingSenderId:"610183728697",appId:"1:610183728697:web:895a3c11bc5821ac5447e8"});
+const auth=getAuth(app),db=getFirestore(app),el=id=>document.getElementById(id);
+let ready,STATE=null,ALIVE=0,AT=0,user=null,unsub=null,waiting=0;
+window.cloudReady=new Promise(r=>ready=r);
+
+async function unpack(d){
+  if(!d.z)return d.t||'';
+  const bin=atob(d.t),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+  return await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('deflate'))).text();
+}
+function b64(buf){const u=new Uint8Array(buf);let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)}
+const laptopUp=()=>Date.now()/1000-ALIVE<150;
+function status(){
+  const c=el('cs');if(!user){c.textContent='';c.className='';return}
+  const hm=t=>new Date(t*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  if(!ALIVE){c.className='down';c.textContent='Waiting for the laptop…'}
+  else if(laptopUp()){c.className='up';c.innerHTML='Laptop connected · updated '+hm(AT)+' · <a href="#" id="so">sign out</a>'}
+  else{c.className='down';c.innerHTML='Laptop NOT answering since '+hm(ALIVE)+' — this is the last copy, buttons will not work · <a href="#" id="so">sign out</a>'}
+  const s=el('so');if(s)s.onclick=e=>{e.preventDefault();signOut(auth)};
+}
+setInterval(status,20000);
+function busy(n){waiting+=n;el('busy').style.display=waiting>0?'block':'none'}
+
+window.cloudApi=async function(path,body,raw){
+  if(path=='/api/state'&&body===undefined){
+    if(STATE===null)await new Promise(r=>{const t=setInterval(()=>{if(STATE!==null){clearInterval(t);r()}},200)});
+    return JSON.parse(STATE);
+  }
+  const c={status:'new',path,method:body===undefined?'GET':'POST',by:user.email,ts:serverTimestamp(),body:'',b64:false,headers:'{}'};
+  if(body!==undefined){
+    if(raw){c.headers=JSON.stringify(raw.h||{});
+      if(body instanceof ArrayBuffer){if(body.byteLength>700000){showErr('This file is too big to send from the phone (over 700 KB). Use the laptop page for it.');throw 0}
+        c.body=b64(body);c.b64=true;c.headers=JSON.stringify(Object.assign({'Content-Type':'application/octet-stream'},raw.h||{}))}
+      else c.body=String(body)}
+    else c.body=JSON.stringify(body);
+  }
+  if(!laptopUp()){showErr('The laptop is not answering (off, asleep or no internet), so nothing was changed. Try again when the green line is back.');throw 0}
+  busy(1);
+  try{
+    const ref=await addDoc(collection(db,'wa_cmd'),c);
+    const limit=path.startsWith('/api/inventory')?200000:45000;
+    const d=await new Promise((res,rej)=>{
+      const t=setTimeout(()=>{u();rej(new Error('late'))},limit);
+      const u=onSnapshot(ref,s=>{const x=s.data();if(x&&x.status=='done'){clearTimeout(t);u();res(x)}},e=>{clearTimeout(t);rej(e)});
+    }).catch(async e=>{try{await deleteDoc(ref)}catch(_){ }
+      showErr(e.message=='late'?'No answer from the laptop. Nothing was changed (if it was, the page will show it) — check and try again.':'Could not reach Firebase: '+e.message);throw 0});
+    deleteDoc(ref).catch(()=>{});
+    let j;try{j=JSON.parse(await unpack(d))}catch(e){j={error:'bad answer'}}
+    if(j.error){showErr(j.error);throw 0}
+    return j;
+  }finally{busy(-1)}
+};
+
+onAuthStateChanged(auth,u=>{
+  user=u;el('lg').style.display=u?'none':'flex';
+  if(unsub){unsub();unsub=null}
+  if(!u){STATE=null;status();return}
+  unsub=onSnapshot(doc(db,'wa','state'),async s=>{
+    const d=s.data();if(!d){status();return}
+    ALIVE=Number(d.alive||0);const at=Number(d.at||0);
+    if(at!=AT||STATE===null){AT=at;STATE=await unpack(d);if(window.cloudOnState)window.cloudOnState()}
+    status();
+  },e=>{el('cs').className='down';el('cs').textContent=e.code=='permission-denied'?'This account is not allowed to see the orders.':'Firebase: '+e.message});
+  ready();
+});
+async function login(){
+  el('lerr').textContent='';el('lb').disabled=true;
+  try{await signInWithEmailAndPassword(auth,el('le').value.trim(),el('lp').value);el('lp').value=''}
+  catch(e){el('lerr').textContent=/network/.test(e.code)?'No internet.':'Wrong email or password.'}
+  el('lb').disabled=false;
+}
+el('lb').onclick=login;el('lp').onkeydown=e=>{if(e.key=='Enter')login()};
+
+</script></body></html>
