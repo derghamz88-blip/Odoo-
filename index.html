@@ -73,6 +73,7 @@ details[open] summary{margin-bottom:8px}.el input{width:100%}.el td{border:0;pad
 <h2>Products <span id="nc2"></span></h2><div id="nprod" class="card"></div>
 <h2>No invoice (ignored customers)</h2><div class="card"><div id="nign"></div>
 <div class="bar" style="margin-top:8px"><input id="ni" placeholder="Name as written in the order" style="flex:1"><button onclick="ign($('ni').value,true)">Add</button></div></div>
+<h2>Not a name (skipped words)</h2><div class="card"><div id="nnot"></div></div>
 </section>
 
 <section id="t-inventory" class="tab">
@@ -116,7 +117,7 @@ function render(s){S=s;showErr(s.odoo_error?('Odoo: '+s.odoo_error):'');
   s.other.forEach(o=>(o.missing||[]).forEach(m=>{const k=m.kind+'|'+m.raw;if(!seen[k]){seen[k]=1;pend.push({...m,where:o.token+' '+o.cust})}}));
   $('pc').textContent=pend.length?'('+pend.length+')':'';
   $('pend').innerHTML=pend.map((m,i)=>'<div class="card"><div class="top"><span class="tag">'+m.kind+'</span><b>'+esc(m.raw)+'</b><span class="mut">'+esc(m.where)+'</span></div><div class="bar" style="margin-top:6px">'+
-    (m.suggest?'<button class="pri sm" onclick="saveMap('+i+')">It is “'+esc(m.suggest.name)+'”</button>':'')+'<button class="sm" onclick="openM(_pend['+i+'])">Match in Odoo</button></div></div>').join('')||'<div class="mut">None.</div>';
+    (m.suggest?'<button class="pri sm" onclick="saveMap('+i+')">It is “'+esc(m.suggest.name)+'”</button>':'')+'<button class="sm" onclick="openM(_pend['+i+'])">Match in Odoo</button><button class="sm del" onclick="notName('+i+')">✗ Not a '+m.kind+'</button></div></div>').join('')||'<div class="mut">None.</div>';
   window._pend=pend;
   $('qc').textContent='('+s.rows.length+')';
   $('rows').innerHTML=s.rows.map((r,ri)=>'<div class="card"><div class="top"><b>'+esc(r.customer)+'</b>'+(r.po?'<span class="tag">PO '+esc(r.po)+'</span>':'')+
@@ -127,7 +128,7 @@ function render(s){S=s;showErr(s.odoo_error?('Odoo: '+s.odoo_error):'');
     '<div class="bar" style="margin-top:7px"><button class="sm pri" onclick="openEdit(S.rows['+ri+'].msgs)">Edit</button>'+
     (r.so&&s.driver_opts.length?'<select onchange="setDrv(\''+esc(r.key)+'\',this.value)"><option value="">'+(r.driver?'Driver: '+esc(r.driver):'Driver…')+'</option>'+s.driver_opts.map(o=>'<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>').join('')+'</select>':(r.driver?'<span class="tag">Driver: '+esc(r.driver)+'</span>':''))+
     r.msgs.map((id,k)=>'<button class="sm del" onclick="cancel(\''+esc(id)+'\',true)">Cancel '+esc(r.tokens[k])+'</button>').join('')+'</div></div>').join('')||'<div class="mut">No quotations yet.</div>';
-  const why={pending:'waiting for names',waiting:'tender waiting for the fresh order',cancelled:'cancelled',ignored:'customer marked “no invoice”',existing:'was here before going live (not sent)'};
+  const why={pending:'waiting for names',waiting:'tender waiting for the fresh order',cancelled:'cancelled',ignored:'customer marked “no invoice”',notname:'name marked “not a customer/product”',existing:'was here before going live (not sent)'};
   $('other').innerHTML=s.other.map(o=>'<div class="card"><div class="top"><span class="tag">'+esc(o.token)+'</span><b>'+esc(o.cust)+'</b>'+(o.po?'<span class="tag">PO '+esc(o.po)+'</span>':'')+
     '<span class="tag">'+esc(o.date)+'</span><span class="would">'+esc(why[o.status]||o.status)+'</span></div><div class="mut">'+esc(o.lines.join(' · '))+' — '+esc(o.time)+'</div>'+
     '<div class="bar" style="margin-top:6px"><button class="sm" onclick="openEdit([\''+esc(o.id)+'\'])">Edit</button>'+
@@ -152,6 +153,10 @@ async function clearAlerts(){render(await api('/api/alerts_clear',{}))}
 async function setDate(){if($('dt').value)render(await api('/api/date',{date:$('dt').value}))}
 async function cancel(id,on){if(!on||confirm('Cancel this order? Its lines leave the quotation; a quotation left empty is cancelled in Odoo.'))render(await api('/api/cancel',{id,on}))}
 async function setDrv(key,val){if(val)render(await api('/api/driver',{key,val}))}
+async function notName(i){const m=window._pend[i];
+  const msg=m.kind=='customer'?'“'+m.raw+'” is NOT a customer?\n\nOrders read with this name are skipped (no quotation), now and every next time.\nIf it was a real order written wrongly, use Edit on it to put the right customer.\nYou can undo it in the Names tab.'
+    :'“'+m.raw+'” is NOT a product?\n\nThis line is skipped (the rest of the order goes on), now and every next time.\nYou can undo it in the Names tab.';
+  if(!confirm(msg))return;render(await api('/api/notname',{kind:m.kind,raw:m.raw,on:true}))}
 async function saveMap(i){const m=window._pend[i];render(await api('/api/map',{kind:m.kind,raw:m.raw,id:m.suggest.id,name:m.suggest.name}))}
 
 /* ---------- match window (orders, names, inventory) ---------- */
@@ -197,8 +202,10 @@ function renderNames(){if(!NAMES)return;const f=$('nf').value.trim().toLowerCase
     '<td style="white-space:nowrap"><button class="sm" onclick="openM({kind:\''+kind+'\',raw:NAMES.'+(kind=='customer'?'customers':'products')+'['+x.i+'].raw})">Change</button> <button class="sm del" onclick="unmap(\''+kind+'\','+x.i+')">Remove</button></td></tr>').join('')+'</table>':'<span class="mut">None.</span>'};
   $('nc1').textContent='('+NAMES.customers.length+')';$('nc2').textContent='('+NAMES.products.length+')';
   $('ncust').innerHTML=tbl('customer',NAMES.customers);$('nprod').innerHTML=tbl('product',NAMES.products);
+  $('nnot').innerHTML=(NAMES.notnames||[]).map((n,i)=>'<div class="bar" style="padding:3px 0"><span class="tag">not a '+n.kind+'</span><span style="flex:1">'+esc(n.raw)+'</span><button class="sm" onclick="unNot('+i+')">Undo</button></div>').join('')||'<span class="mut">None.</span>';
   $('nign').innerHTML=NAMES.ignored.map((n,i)=>'<div class="bar" style="padding:3px 0"><span style="flex:1">'+esc(n)+'</span><button class="sm" onclick="ign(NAMES.ignored['+i+'],false)">Invoice again</button></div>').join('')||'<span class="mut">None.</span>'}
 async function unmap(kind,i){const n=NAMES[kind=='customer'?'customers':'products'][i];if(!confirm('Remove the match of “'+n.raw+'”? Orders with this name will wait under “Names to match”.'))return;NAMES=await api('/api/unmap',{kind,raw:n.raw});renderNames()}
+async function unNot(i){const n=NAMES.notnames[i];NAMES=await api('/api/notname',{kind:n.kind,raw:n.raw,on:false,names:1});renderNames()}
 async function ign(raw,on){if(!String(raw).trim())return;NAMES=await api('/api/ignore',{raw,on});$('ni').value='';renderNames()}
 
 /* ---------- inventory ---------- */
@@ -246,7 +253,7 @@ const laptopUp=()=>Date.now()/1000-ALIVE<150;
 function status(){
   const c=el('cs');if(!user){c.textContent='';c.className='';return}
   const hm=t=>new Date(t*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-  if(!ALIVE){c.className='down';c.textContent='Waiting for the laptop…'}
+  if(!ALIVE){c.className='down';c.innerHTML='Waiting for the laptop… · <a href="#" id="so">sign out</a>'}
   else if(laptopUp()){c.className='up';c.innerHTML='Laptop connected · updated '+hm(AT)+' · <a href="#" id="so">sign out</a>'}
   else{c.className='down';c.innerHTML='Laptop NOT answering since '+hm(ALIVE)+' — this is the last copy, buttons will not work · <a href="#" id="so">sign out</a>'}
   const s=el('so');if(s)s.onclick=e=>{e.preventDefault();signOut(auth)};
