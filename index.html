@@ -60,7 +60,8 @@ details[open] summary{margin-bottom:8px}.el input{width:100%}.el td{border:0;pad
 <div class="card"><div class="bar"><select id="pg"><option value="nextday">Next Day group</option><option value="tender">Tender group</option><option value="fresh">Fresh group</option><option value="drivers">Drivers message</option></select>
 <button class="pri" onclick="paste()">Read it</button><button onclick="clearTest()">Clear test messages</button></div>
 <textarea id="pt" style="margin-top:8px" placeholder="Paste one message (customer on the first line). Several messages: put a line with --- between them."></textarea>
-<div class="bar" style="margin-top:8px"><span class="mut">Date for next-day / tender orders:</span><input type="date" id="dt"><button onclick="setDate()">Set</button></div></div>
+<div class="bar" style="margin-top:8px"><span class="mut">Date for next-day / tender orders:</span><input type="date" id="dt"><button onclick="setDate()">Set</button></div>
+<div class="bar" style="margin-top:6px"><label class="mut"><input type="checkbox" id="dmv"> also move next-day/tender orders received since</label><input type="datetime-local" id="dsince"></div></div>
 <h2>Messages that were not read as orders</h2><div id="unread" class="card log"></div>
 <h2>What it did</h2><div id="log" class="card log"></div>
 </section>
@@ -150,7 +151,10 @@ async function toggleLive(){
 async function paste(){const t=$('pt').value.trim();if(!t)return;render(await api('/api/paste',{group:$('pg').value,text:t}));$('pt').value=''}
 async function clearTest(){if(confirm('Remove the messages on this page (only ones without an Odoo quotation)?'))render(await api('/api/clear',{}))}
 async function clearAlerts(){render(await api('/api/alerts_clear',{}))}
-async function setDate(){if($('dt').value)render(await api('/api/date',{date:$('dt').value}))}
+async function setDate(){if(!$('dt').value)return;const b={date:$('dt').value};
+  if($('dmv').checked){if(!$('dsince').value){alert('Choose the time the date message should have come (e.g. today 12:45).');return}
+    if(!confirm('Move every next-day and tender order received since '+$('dsince').value.replace('T',' ')+' to '+b.date+'?\nTheir quotations in Odoo are moved to the new date too (drafts only).'))return;b.since=$('dsince').value}
+  render(await api('/api/date',b));$('dmv').checked=false}
 async function cancel(id,on){if(!on||confirm('Cancel this order? Its lines leave the quotation; a quotation left empty is cancelled in Odoo.'))render(await api('/api/cancel',{id,on}))}
 async function setDrv(key,val){if(val)render(await api('/api/driver',{key,val}))}
 async function notName(i){const m=window._pend[i];
