@@ -36,6 +36,14 @@ pre{white-space:pre-wrap;background:var(--bg);border-radius:8px;padding:8px;font
 details{margin-bottom:8px}summary{cursor:pointer;font-weight:600;padding:10px 13px;background:var(--card);border:1px solid var(--line);border-radius:10px}
 details[open] summary{margin-bottom:8px}.el input{width:100%}.el td{border:0;padding:2px 4px 2px 0}
 .tab{display:none}.tab.on{display:block}
+.days{display:flex;gap:6px;overflow-x:auto;padding:10px 0 6px;position:sticky;top:92px;background:var(--bg);z-index:4}
+.days button{flex:0 0 auto;border-radius:99px;padding:6px 12px;text-align:center;line-height:1.15}.days button small{display:block;font-size:.68rem;color:var(--mut)}
+.days button.on{background:var(--teal);border-color:var(--teal);color:#fff}.days button.on small{color:#d7efe9}
+.chips{display:flex;gap:6px;overflow-x:auto;margin:8px 0}.chips button{flex:0 0 auto;border-radius:99px;padding:3px 10px;font-size:.78rem}.chips button.on{background:var(--txt);color:#fff;border-color:var(--txt)}
+.qc{border-left:4px solid var(--line);padding:0}.qc.created{border-left-color:var(--ok)}.qc.updated{border-left-color:var(--warn)}.qc.bad{border-left-color:var(--bad)}
+.qh{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:9px 11px;cursor:pointer}.qh b{font-size:.92rem}.qh .r{margin-left:auto;display:flex;gap:6px;align-items:center}
+.qb{padding:0 11px 10px;border-top:1px dashed var(--line)}a.so{margin:0;text-decoration:none}a.so:hover{text-decoration:underline}
+.sum{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:.85rem}.sum b{font-size:1.05rem}.two{display:grid;grid-template-columns:1fr;gap:8px}@media(min-width:640px){.two{grid-template-columns:1fr 1fr}}
 
 #lg{position:fixed;inset:0;background:#f3f4f6;z-index:99;display:none;align-items:center;justify-content:center;padding:16px}
 #lg .card{max-width:340px;width:100%}#lg input{width:100%;margin:6px 0;padding:10px;font-size:16px;box-sizing:border-box}
@@ -50,14 +58,19 @@ details[open] summary{margin-bottom:8px}.el input{width:100%}.el td{border:0;pad
 <div id="err"></div>
 <main>
 <section id="t-orders" class="tab on">
-<div class="mut" id="info" style="margin-top:8px"></div>
-<div id="alerts"></div>
-<h2>Names to match <span id="pc"></span></h2><div id="pend"></div>
+<div id="alerts" style="margin-top:8px"></div>
+<div id="days" class="days"></div>
+<div id="dsum" class="card"></div>
+<div id="tot"></div>
+<div class="bar"><input id="q" type="search" placeholder="Search customer, PO, quotation…" oninput="draw()" style="flex:1;min-width:150px"><select id="sort" onchange="draw()"><option value="new">Newest first</option><option value="cust">Customer A–Z</option><option value="tok">Order number</option></select></div>
+<div id="flt" class="chips"></div>
+<div id="pendw"><h2>Names to match <span id="pc"></span></h2><div id="pend"></div></div>
 <h2>Quotations <span id="qc"></span></h2><div id="rows"></div>
-<h2>Orders without a quotation</h2><div id="other"></div>
+<h2>Orders without a quotation <span id="oc"></span></h2><div id="other"></div>
 <h2>Drivers not placed <span id="dc"></span></h2><div id="drv"></div>
-<h2>Messages that were not read as orders</h2><div id="unread" class="card log"></div>
-<h2>What it did</h2><div id="log" class="card log"></div>
+<details style="margin-top:16px"><summary>Messages that were not read as orders</summary><div id="unread" class="card log"></div></details>
+<details><summary>What it did</summary><div id="log" class="card log"></div></details>
+<div class="mut" id="info" style="margin-top:8px"></div>
 </section>
 
 <section id="t-add" class="tab">
@@ -67,6 +80,11 @@ details[open] summary{margin-bottom:8px}.el input{width:100%}.el td{border:0;pad
 <textarea id="pt" style="margin-top:8px" placeholder="Paste one message (customer on the first line). Several messages: put a line with --- between them."></textarea>
 </div><h2>Date of next-day / tender orders</h2><div class="card"><div class="mut" id="dnow" style="margin-bottom:6px"></div><div class="bar"><span class="mut">Date:</span><input type="date" id="dt"><button onclick="setDate()">Set</button></div>
 <div class="bar" style="margin-top:6px"><label class="mut"><input type="checkbox" id="dmv"> also move next-day/tender orders received since</label><input type="datetime-local" id="dsince"></div></div>
+<h2>Settings</h2><div class="card">
+<label class="bar"><input type="checkbox" id="sa" onchange="saveSet({alerts_wa:this.checked})"> <span>WhatsApp alerts from the bot (new name to match, failed quotation, cancelled order with a confirmed quotation)</span></label>
+<div class="bar" style="margin-top:8px"><span class="mut">Daily report on WhatsApp at</span><input type="time" id="srt"><button onclick="saveSet({report_time:$('srt').value})">Save</button><button onclick="saveSet({report_time:''});$('srt').value=''">Off</button></div>
+<div class="bar" style="margin-top:8px"><span class="mut">PIN for this app (other phones on the Wi-Fi): <b id="spin"></b></span><input id="spv" type="password" placeholder="new PIN" style="width:120px"><button onclick="setPin()">Set</button></div>
+<div class="mut" style="margin-top:6px">Alerts and the report go to the bot's alerts group (or your number), the same place the LPO bot writes to.</div></div>
 </section>
 
 <section id="t-history" class="tab"><div class="mut" style="margin:10px 0">Every delivery day: its quotations and everything that was added, changed, edited or cancelled.</div><div id="hist"></div></section>
@@ -92,6 +110,9 @@ details[open] summary{margin-bottom:8px}.el input{width:100%}.el td{border:0;pad
 <div id="ov" class="ov" onclick="if(event.target.id=='ov')closeM()"><div class="card"><b id="mt"></b><div class="mut" id="ms"></div>
 <div class="bar" style="margin-top:8px"><input id="mq" style="flex:1" placeholder="Search in Odoo…" onkeydown="if(event.key=='Enter')srch()"><button class="pri" onclick="srch()">Search</button></div>
 <div id="res"></div><div style="margin-top:10px;text-align:right"><button onclick="closeM()">Close</button></div></div></div>
+
+<div id="ro" class="ov" onclick="if(event.target.id=='ro')this.style.display='none'"><div class="card"><b>Day report</b><pre id="rt"></pre>
+<div class="bar" style="justify-content:flex-end"><button onclick="$('ro').style.display='none'">Close</button><button onclick="navigator.clipboard&&navigator.clipboard.writeText($('rt').textContent)">Copy</button><button class="pri" onclick="sendRep()">Send to WhatsApp</button></div></div></div>
 
 <div id="eo" class="ov"><div class="card"><b>Edit order</b><div class="mut">Change what was read. The quotation in Odoo follows (drafts only).</div>
 <div id="eb"></div><datalist id="plist"></datalist>
@@ -123,27 +144,72 @@ function render(s){S=s;showErr(s.odoo_error?('Odoo: '+s.odoo_error):'');
   $('pend').innerHTML=pend.map((m,i)=>'<div class="card"><div class="top"><span class="tag">'+m.kind+'</span><b>'+esc(m.raw)+'</b><span class="mut">'+esc(m.where)+'</span></div><div class="bar" style="margin-top:6px">'+
     (m.suggest?'<button class="pri sm" onclick="saveMap('+i+')">It is “'+esc(m.suggest.name)+'”</button>':'')+'<button class="sm" onclick="openM(_pend['+i+'])">Match in Odoo</button><button class="sm del" onclick="notName('+i+')">✗ Not a '+m.kind+'</button></div></div>').join('')||'<div class="mut">None.</div>';
   window._pend=pend;
-  $('qc').textContent='('+s.rows.length+')';
-  $('rows').innerHTML=s.rows.map((r,ri)=>'<div class="card"><div class="top"><b>'+esc(r.customer)+'</b>'+(r.po?'<span class="tag">PO '+esc(r.po)+'</span>':'')+
-    '<span class="tag">'+esc(r.date)+'</span>'+r.tokens.map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+(r.edited?'<span class="tag ed">edited</span>':'')+
-    (r.so?'<span class="so">'+esc(r.so)+(r.status=='alert'?' ⚠':'')+'</span>':'<span class="would">'+(r.failed?'failed – retrying':s.live?'making…':'would be made')+'</span>')+'</div>'+
-    '<div class="mut">'+esc(r.custs.join(' / '))+'</div>'+linesTable(r.lines)+
-    (r.notes.length?'<div class="note">Notes: '+esc(r.notes.join(' · '))+'</div>':'')+(r.warns.length?'<div class="w">⚠ '+esc(r.warns.join(' · '))+'</div>':'')+
-    '<div class="bar" style="margin-top:7px"><button class="sm pri" onclick="openEdit(S.rows['+ri+'].msgs)">Edit</button>'+
-    (r.so&&s.driver_opts.length?'<select onchange="setDrv(\''+esc(r.key)+'\',this.value)"><option value="">'+(r.driver?'Driver: '+esc(r.driver):'Driver…')+'</option>'+s.driver_opts.map(o=>'<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>').join('')+'</select>':(r.driver?'<span class="tag">Driver: '+esc(r.driver)+'</span>':''))+
-    r.msgs.map((id,k)=>'<button class="sm del" onclick="cancel(\''+esc(id)+'\',true)">Cancel '+esc(r.tokens[k])+'</button>').join('')+'</div></div>').join('')||'<div class="mut">No quotations yet.</div>';
-  const why={pending:'waiting for names',waiting:'tender waiting for the fresh order',cancelled:'cancelled',ignored:'customer marked “no invoice”',notname:'name marked “not a customer/product”',existing:'was here before going live (not sent)'};
-  $('other').innerHTML=s.other.map(o=>'<div class="card"><div class="top"><span class="tag">'+esc(o.token)+'</span><b>'+esc(o.cust)+'</b>'+(o.po?'<span class="tag">PO '+esc(o.po)+'</span>':'')+
-    '<span class="tag">'+esc(o.date)+'</span><span class="would">'+esc(why[o.status]||o.status)+'</span></div><div class="mut">'+esc(o.lines.join(' · '))+' — '+esc(o.time)+'</div>'+
-    '<div class="bar" style="margin-top:6px"><button class="sm" onclick="openEdit([\''+esc(o.id)+'\'])">Edit</button>'+
-    (o.status=='cancelled'||o.status=='existing'?'<button class="sm" onclick="cancel(\''+esc(o.id)+'\',false)">'+(o.status=='existing'?'Send it':'Restore')+'</button>':'<button class="sm del" onclick="cancel(\''+esc(o.id)+'\',true)">Cancel</button>')+'</div></div>').join('')+
-    s.gone.filter(g=>g.status!='cancelled').map(g=>'<div class="card b">'+esc(g.name)+': cancel it by hand in Odoo</div>').join('')||'<div class="mut">None.</div>';
+  $('pendw').style.display=pend.length?'':'none';
+  if($('sa')){$('sa').checked=s.settings.alerts_wa;if(document.activeElement!=$('srt'))$('srt').value=s.settings.report_time||'';$('spin').textContent=s.settings.has_pin?'set':'not set'}
+  draw();
   $('dc').textContent=s.drv_report.length?'('+s.drv_report.length+')':'';
   $('drv').innerHTML=(s.drv_dates.length?'<div class="mut">Drivers message received for: '+esc(s.drv_dates.slice(-3).join(', '))+'</div>':'<div class="mut">No drivers message yet. It is read from the delivery group, or paste it below (choose “Drivers message”).</div>')+
     s.drv_report.map(d=>'<div class="card"><div class="top"><span class="tag">'+esc(d.date)+'</span><b>'+esc(d.cust)+'</b><span class="tag">'+esc(d.ref||'')+'</span><span class="tag">'+esc(d.driver)+'</span></div><div class="w">'+esc(d.why)+'</div></div>').join('');
   $('unread').innerHTML=s.unread.map(u=>'<div><span class="mut">'+esc(u.time)+' '+esc(u.group)+' ('+esc(u.why)+')</span> '+esc(u.body)+'</div>').join('')||'<span class="mut">None.</span>';
   $('log').innerHTML=s.log.map(l=>'<div class="'+esc(l.kind)+'"><span class="mut">'+esc(l.time)+'</span> '+esc(l.text)+'</div>').join('')||'<span class="mut">Nothing yet.</span>';
 }
+/* ---------- the day view ---------- */
+let DAY=null,FLT='all';const OPEN=new Set();
+const WHY={pending:'waiting for names',waiting:'tender waiting for the fresh order',cancelled:'cancelled',ignored:'customer marked “no invoice”',notname:'name marked “not a customer/product”',existing:'was here before going live (not sent)'};
+function dayLabel(d){if(d==S.tomorrow)return 'Tomorrow';if(d==S.today)return 'Today';const x=new Date(d+'T12:00:00');return x.toLocaleDateString('en-GB',{weekday:'short'})}
+const hasWarn=r=>r.dup||r.failed||r.status=='alert'||(r.warns&&r.warns.length);
+function pickDay(d){DAY=d;$('q').value='';draw();window.scrollTo(0,0)}
+function setFlt(f){FLT=f;draw()}
+function tog(k){OPEN.has(k)?OPEN.delete(k):OPEN.add(k);draw()}
+function draw(){const s=S;if(!s)return;
+  const cnt={};s.rows.forEach(r=>{cnt[r.date]=cnt[r.date]||[0,0];cnt[r.date][0]++});s.other.forEach(o=>{if(o.date){cnt[o.date]=cnt[o.date]||[0,0];cnt[o.date][1]++}});
+  const days=Object.keys(cnt).sort().reverse();
+  if(!DAY||!cnt[DAY])DAY=cnt[s.dates.nextday]?s.dates.nextday:cnt[s.today]?s.today:days[0]||s.today;
+  $('days').innerHTML=days.map(d=>'<button class="'+(d==DAY?'on':'')+'" onclick="pickDay(\''+d+'\')">'+dayLabel(d)+' '+d.slice(8)+'/'+d.slice(5,7)+'<small>'+cnt[d][0]+' quotation'+(cnt[d][0]==1?'':'s')+'</small></button>').join('');
+  const q=$('q').value.trim().toLowerCase();
+  const dayRows=s.rows.filter(r=>r.date==DAY);
+  let rows=q?s.rows.filter(r=>(r.customer+' '+r.custs.join(' ')+' '+r.po+' '+r.so+' '+r.tokens.join(' ')+' '+r.driver).toLowerCase().includes(q)):dayRows;
+  const F={all:r=>1,N:r=>r.tokens.some(t=>t[0]=='N'),T:r=>r.tokens.some(t=>t[0]=='T'),F:r=>r.tokens.some(t=>t[0]=='F'),nodrv:r=>r.so&&!r.driver,edited:r=>r.edited,warn:hasWarn};
+  const base=rows;rows=rows.filter(F[FLT]||F.all);
+  const names={all:'All',N:'Next day',T:'Tender',F:'Fresh',nodrv:'No driver',edited:'Edited',warn:'⚠ To check'};
+  $('flt').innerHTML=Object.keys(names).map(k=>'<button class="'+(k==FLT?'on':'')+'" onclick="setFlt(\''+k+'\')">'+names[k]+' '+base.filter(F[k]).length+'</button>').join('');
+  const so=$('sort').value,tn=r=>Math.min(...r.tokens.map(t=>({N:0,T:1e5,F:2e5}[t[0]]||0)+(+t.slice(1)||0)));
+  rows=rows.slice().sort(so=='cust'?(a,b)=>a.custs[0].localeCompare(b.custs[0]):so=='tok'?(a,b)=>tn(a)-tn(b):(a,b)=>b.ts-a.ts);
+  if(q)rows.sort((a,b)=>b.date.localeCompare(a.date));
+  // summary of the day
+  const made=dayRows.filter(r=>r.so).length,nd=dayRows.filter(r=>r.so&&!r.driver).length,wr=dayRows.filter(hasWarn).length,oth=s.other.filter(o=>o.date==DAY);
+  const pendN=oth.filter(o=>o.status=='pending').length,canc=oth.filter(o=>o.status=='cancelled').length;
+  $('dsum').innerHTML='<div class="sum"><span><b>'+dayRows.length+'</b> quotations'+(made<dayRows.length?' <span class="w" style="display:inline">('+(dayRows.length-made)+(s.live?' being made':' would be made')+')</span>':'')+'</span>'+
+    '<span'+(nd?' class="b"':'')+'><b>'+nd+'</b> no driver</span>'+(wr?'<span class="b"><b>'+wr+'</b> to check</span>':'')+(pendN?'<span class="b"><b>'+pendN+'</b> waiting for names</span>':'')+(canc?'<span><b>'+canc+'</b> cancelled</span>':'')+
+    '<span style="margin-left:auto" class="bar"><button class="sm" onclick="togTot()">Totals</button><button class="sm" onclick="report()">Report</button></span></div>'+
+    '<div class="mut">'+esc(DAY)+' · next day now: '+esc(s.dates.nextday||'—')+' · tender: '+esc(s.dates.tender||'—')+'</div>';
+  drawTot(dayRows);
+  $('qc').textContent='('+rows.length+(q?' found in all days':'')+')';
+  $('rows').innerHTML=rows.map(r=>{const ri=s.rows.indexOf(r),op=OPEN.has(r.key),cls=r.failed||r.status=='alert'?'bad':r.status=='updated'?'updated':r.so?'created':'';
+    return '<div class="card qc '+cls+'"><div class="qh" onclick="tog(S.rows['+ri+'].key)"><b>'+esc(r.custs[0])+'</b>'+(r.po?'<span class="tag">PO '+esc(r.po)+'</span>':'')+
+    r.tokens.map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+(q?'<span class="tag">'+esc(r.date.slice(5))+'</span>':'')+(r.edited?'<span class="tag ed">edited</span>':'')+(hasWarn(r)?'<span class="tag x">⚠</span>':'')+
+    '<span class="r">'+(r.driver?'<span class="tag">'+esc(r.driver)+'</span>':'')+(r.so?'<a class="so" target="_blank" rel="noopener" href="'+esc(r.url)+'" onclick="event.stopPropagation()">'+esc(r.so)+' ↗</a>':'<span class="would" style="margin:0">'+(r.failed?'failed – retrying':s.live?'making…':'would be made')+'</span>')+'</span></div>'+
+    (op?'<div class="qb"><div class="mut" style="margin-top:6px">'+esc(r.customer)+' · '+esc(r.time)+(r.status=='updated'?' · changed after it was made':'')+'</div>'+linesTable(r.lines)+
+    (r.notes.length?'<div class="note">Notes: '+esc(r.notes.join(' · '))+'</div>':'')+(r.warns.length?'<div class="w">⚠ '+esc(r.warns.join(' · '))+'</div>':'')+(r.dup?'<div class="w b">⚠ Possible duplicate: '+esc(r.dup)+'</div>':'')+(r.status=='alert'?'<div class="w b">⚠ Confirmed in Odoo – it was not changed there. Check it by hand.</div>':'')+
+    '<div class="bar" style="margin-top:7px"><button class="sm pri" onclick="openEdit(S.rows['+ri+'].msgs)">Edit</button>'+
+    (r.so&&s.driver_opts.length?'<select onchange="setDrv(S.rows['+ri+'].key,this.value)"><option value="">'+(r.driver?'Driver: '+esc(r.driver):'Driver…')+'</option>'+s.driver_opts.map(o=>'<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>').join('')+'</select>':'')+
+    r.msgs.map((id,k)=>'<button class="sm del" onclick="cancel(\''+esc(id)+'\',true)">Cancel '+esc(r.tokens[k])+'</button>').join('')+'</div></div>':'')+'</div>'}).join('')||'<div class="mut">'+(q?'Nothing found.':'No quotations for this day'+(FLT!='all'?' with this filter':'')+'.')+'</div>';
+  const other=q?s.other.filter(o=>(o.cust+' '+o.po+' '+o.token).toLowerCase().includes(q)):s.other.filter(o=>o.date==DAY||o.status=='pending');
+  $('oc').textContent=other.length?'('+other.length+')':'';
+  $('other').innerHTML=other.map(o=>'<div class="card"><div class="top"><span class="tag">'+esc(o.token)+'</span><b>'+esc(o.cust)+'</b>'+(o.po?'<span class="tag">PO '+esc(o.po)+'</span>':'')+
+    '<span class="tag">'+esc(o.date)+'</span><span class="would">'+esc(WHY[o.status]||o.status)+'</span></div><div class="mut">'+esc(o.lines.join(' · '))+' — '+esc(o.time)+'</div>'+
+    '<div class="bar" style="margin-top:6px"><button class="sm" onclick="openEdit([\''+esc(o.id)+'\'])">Edit</button>'+
+    (o.status=='cancelled'||o.status=='existing'?'<button class="sm" onclick="cancel(\''+esc(o.id)+'\',false)">'+(o.status=='existing'?'Send it':'Restore')+'</button>':'<button class="sm del" onclick="cancel(\''+esc(o.id)+'\',true)">Cancel</button>')+'</div></div>').join('')+
+    s.gone.filter(g=>g.status!='cancelled').map(g=>'<div class="card b">'+esc(g.name)+': cancel it by hand in Odoo</div>').join('')||'<div class="mut">None.</div>';
+}
+let TOT=false;function togTot(){TOT=!TOT;draw()}
+function drawTot(rows){if(!TOT){$('tot').innerHTML='';return}const t={};rows.forEach(r=>r.lines.forEach(l=>{const k=l.name+'|'+l.uom;t[k]=(t[k]||0)+(+l.qty||0)}));
+  const a=Object.entries(t).sort((x,y)=>y[1]-x[1]);
+  $('tot').innerHTML='<div class="card"><b>Totals for '+esc(DAY)+'</b> <span class="mut">('+rows.length+' quotations)</span><table>'+a.map(([k,v])=>'<tr><td>'+esc(k.split('|')[0])+'</td><td class="q">'+(Math.round(v*100)/100)+' '+esc(k.split('|')[1])+'</td></tr>').join('')+'</table></div>'}
+async function report(){const j=await api('/api/report',{date:DAY});$('rt').textContent=j.text;$('ro').style.display='flex'}
+async function sendRep(){await api('/api/report',{date:DAY,send:true});$('ro').style.display='none';alert('The bot sends it to the alerts group within half a minute.')}
+async function saveSet(b){render(await api('/api/settings',b))}
+async function setPin(){const v=$('spv').value.trim();if(v&&v.length<4){alert('At least 4 characters.');return}if(!confirm(v?'Set this PIN? Phones that were logged in must enter it again.':'Remove the PIN?'))return;$('spv').value='';saveSet({pin:v})}
 const linesTable=ls=>'<table>'+ls.map(l=>'<tr><td>'+esc(l.name)+'</td><td class="q">'+l.qty+' '+esc(l.uom)+'</td></tr>').join('')+'</table>';
 async function toggleLive(){
   if(S.live){if(confirm('Back to Preview? Nothing more will be sent to Odoo.'))render(await api('/api/live',{on:false}));return}
@@ -180,8 +246,9 @@ async function pick(k){const r=window._res[k];const j=await api('/api/map',{kind
 /* ---------- edit an order ---------- */
 async function openEdit(ids){const j=await api('/api/msg?ids='+encodeURIComponent(ids.join(',')));if(!j.msgs.length)return;E=j.msgs;
   $('plist').innerHTML=j.products.map(p=>'<option value="'+esc(p)+'">').join('');drawEdit();$('eo').style.display='flex'}
-function drawEdit(){$('eb').innerHTML=E.map((m,i)=>'<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:8px"><div class="top"><span class="tag">'+esc(m.token)+'</span><span class="tag">'+esc(m.group)+'</span>'+(m.edited?'<span class="tag ed">edited</span>':'')+'</div>'+
-  '<div class="mut" style="margin-top:6px">The WhatsApp message:</div><pre>'+esc(m.body)+'</pre>'+
+function drawEdit(){$('eb').innerHTML=E.map((m,i)=>'<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:8px"><div class="top"><span class="tag">'+esc(m.token)+'</span><span class="tag">'+esc(m.group)+'</span>'+(m.edited?'<span class="tag ed">edited</span>':'')+'<span class="mut">'+esc(m.time||'')+'</span></div>'+
+  '<div class="two"><div><div class="mut" style="margin-top:6px">The WhatsApp message:</div><pre>'+esc(m.body)+'</pre></div><div><div class="mut" style="margin-top:6px">Read as:</div><pre>'+esc(m.cust+(m.po?'  (PO '+m.po+')':'')+'\n'+m.lines.map(l=>l.qty+' × '+l.prod).join('\n'))+'</pre></div></div>'+
+  (m.warns&&m.warns.length?'<div class="w">⚠ '+esc(m.warns.join(' · '))+'</div>':'')+
   '<table class="el"><tr><td class="mut">Customer</td><td><input value="'+esc(m.cust)+'" oninput="E['+i+'].cust=this.value"></td></tr>'+
   '<tr><td class="mut">PO</td><td><input value="'+esc(m.po)+'" oninput="E['+i+'].po=this.value"></td></tr>'+
   '<tr><td class="mut">Date</td><td><input type="date" value="'+esc(m.date)+'" oninput="E['+i+'].date=this.value"></td></tr></table>'+
@@ -238,7 +305,7 @@ async function invApply(){if(!$('invd').value){showErr('Pick the inventory date.
     j.result.map(r=>'<tr><td>'+esc(r.odoo)+'</td><td class="q">'+r.counted+'</td><td class="q">'+r.now+'</td><td class="'+(r.ok?'g':'b')+'">'+(r.ok?'✓':'check')+'</td></tr>').join('')+'</table></div>';
   $('invf').value='';loadInv()}
 
-window.cloudOnState=()=>{if(S===null||(curTab()=='orders'&&$('ov').style.display!='flex'&&$('eo').style.display!='flex'&&!$('pt').value))load()};
+window.cloudOnState=()=>{if(S===null||(curTab()=='orders'&&$('ov').style.display!='flex'&&$('eo').style.display!='flex'&&$('ro').style.display!='flex'&&!$('pt').value&&document.activeElement!=$('q')))load()};
 </script>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
