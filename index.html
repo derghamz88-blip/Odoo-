@@ -65,6 +65,7 @@ details[open] summary{margin-bottom:8px}.el input{width:100%}.el td{border:0;pad
 <div class="bar"><input id="q" type="search" placeholder="Search customer, PO, quotation…" oninput="draw()" style="flex:1;min-width:150px"><select id="sort" onchange="draw()"><option value="new">Newest first</option><option value="cust">Customer A–Z</option><option value="tok">Order number</option></select></div>
 <div id="flt" class="chips"></div>
 <div id="pendw"><h2>Names to match <span id="pc"></span></h2><div id="pend"></div></div>
+<div id="dpendw" style="display:none"><h2>🚚 Driver names to match <span id="dpc"></span></h2><div class="mut" style="margin-bottom:6px">Names from the drivers message (IAT Orders spelling). Match each one once; it is kept for good and the driver goes on its quotation.</div><div id="dpend"></div></div>
 <h2>Quotations <span id="qc"></span></h2><div id="rows"></div>
 <h2>Orders without a quotation <span id="oc"></span></h2><div id="other"></div>
 <h2>Drivers not placed <span id="dc"></span></h2><div id="drv"></div>
@@ -139,12 +140,17 @@ function render(s){S=s;showErr(s.odoo_error?('Odoo: '+s.odoo_error):'');
   $('alerts').innerHTML=s.alerts.map(a=>'<div class="card b">⚠ '+esc(a.text)+' <span class="mut">'+esc(a.time)+'</span></div>').join('')+
     (s.alerts.length?'<div style="text-align:right;margin-bottom:8px"><button class="sm" onclick="clearAlerts()">Clear alerts</button></div>':'');
   const seen={},pend=[];
-  s.other.forEach(o=>(o.missing||[]).forEach(m=>{const k=m.kind+'|'+m.raw;if(!seen[k]){seen[k]=1;pend.push({...m,where:o.token+' '+o.cust})}}));
-  $('pc').textContent=pend.length?'('+pend.length+')':'';
-  $('pend').innerHTML=pend.map((m,i)=>'<div class="card"><div class="top"><span class="tag">'+m.kind+'</span><b>'+esc(m.raw)+'</b><span class="mut">'+esc(m.where)+'</span></div><div class="bar" style="margin-top:6px">'+
-    (m.suggest?'<button class="pri sm" onclick="saveMap('+i+')">It is “'+esc(m.suggest.name)+'”</button>':'')+'<button class="sm" onclick="openM(_pend['+i+'])">Match in Odoo</button><button class="sm del" onclick="notName('+i+')">✗ Not a '+m.kind+'</button></div></div>').join('')||'<div class="mut">None.</div>';
+  s.other.forEach(o=>(o.missing||[]).forEach(m=>{const k=m.kind+'|'+m.raw;if(!seen[k]){seen[k]={...m,ids:[],where:o.token+' '+o.cust};pend.push(seen[k])}else if(seen[k].ids&&!seen[k].drv)seen[k].where+=', '+o.token;if(seen[k].ids)seen[k].ids.push(o.id)}));
+  const n0=pend.length;
+  (s.drv_miss||[]).forEach(m=>{const k=m.kind+'|'+m.raw;if(!seen[k]){seen[k]=1;pend.push({...m,drv:1,where:'drivers message '+m.date+' · '+m.driver})}});
+  const card=(m,i)=>'<div class="card"><div class="top"><span class="tag">'+(m.drv?'🚚 driver list':m.kind)+'</span><b>'+esc(m.raw)+'</b><span class="mut">'+esc(m.where)+'</span></div><div class="bar" style="margin-top:6px">'+
+    (m.suggest?'<button class="pri sm" onclick="saveMap('+i+')">It is “'+esc(m.suggest.name)+'”</button>':'')+'<button class="sm" onclick="openM(_pend['+i+'])">Match in Odoo</button>'+(m.kind=='customer'&&!m.drv&&m.ids&&m.ids.length?'<button class="sm" onclick="openOnce('+i+')">'+(m.ids.length>1?'Only these '+m.ids.length+' orders…':'Only this order…')+'</button>':'')+'<button class="sm del" onclick="notName('+i+')">✗ Not a '+m.kind+'</button></div></div>';
+  $('pc').textContent=n0?'('+n0+')':'';
+  $('pend').innerHTML=pend.slice(0,n0).map(card).join('')||'<div class="mut">None.</div>';
+  const nd=pend.length-n0;$('dpc').textContent=nd?'('+nd+')':'';
+  $('dpend').innerHTML=pend.slice(n0).map((m,j)=>card(m,n0+j)).join('');
   window._pend=pend;
-  $('pendw').style.display=pend.length?'':'none';
+  $('pendw').style.display=n0?'':'none';$('dpendw').style.display=nd?'':'none';
   const cf=s.settings||{};if($('sa')){$('sa').checked=!!cf.alerts_wa;if(document.activeElement!=$('srt'))$('srt').value=cf.report_time||'';$('spin').textContent=cf.has_pin?'set':'not set'}
   if(!s.settings)showErr('The app on the laptop is an older version than this page: copy the new wa_app_server.py to odoo_scripts\\wa_app and restart it (stop_wa_app, start_wa_app).');
   try{draw()}catch(e){showErr('Page error: '+e.message);console.error(e)}
@@ -189,11 +195,11 @@ function draw(){const s=S;if(!s)return;s.rows.forEach(r=>{if(r.status=='deleted'
   $('rows').innerHTML=rows.map(r=>{const ri=s.rows.indexOf(r),op=OPEN.has(r.key),cls=r.failed||r.status=='alert'?'bad':r.status=='updated'?'updated':r.so?'created':'';
     return '<div class="card qc '+cls+'"><div class="qh" onclick="tog(S.rows['+ri+'].key)"><b>'+esc(r.custs[0])+'</b>'+(r.po?'<span class="tag">PO '+esc(r.po)+'</span>':'')+
     r.tokens.map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+(q?'<span class="tag">'+esc(r.date.slice(5))+'</span>':'')+(r.edited?'<span class="tag ed">edited</span>':'')+(hasWarn(r)?'<span class="tag x">⚠</span>':'')+
-    '<span class="r">'+(r.driver?'<span class="tag">'+esc(r.driver)+'</span>':'')+(r.so&&r.url?'<a class="so" target="_blank" rel="noopener" href="'+esc(r.url)+'" onclick="event.stopPropagation()">'+esc(r.so)+' ↗</a>':r.so?'<span class="so" style="margin:0">'+esc(r.so)+'</span>':'<span class="would" style="margin:0">'+(r.failed?'failed – retrying':s.live?'making…':'would be made')+'</span>')+'</span></div>'+
+    '<span class="r">'+(r.driver?'<span class="tag">'+esc(r.driver)+'</span>':r.usual?'<span class="mut" style="font-size:12px">usually '+esc(r.usual)+'?</span> ':'')+(r.so&&r.url?'<a class="so" target="_blank" rel="noopener" href="'+esc(r.url)+'" onclick="event.stopPropagation()">'+esc(r.so)+' ↗</a>':r.so?'<span class="so" style="margin:0">'+esc(r.so)+'</span>':'<span class="would" style="margin:0">'+(r.failed?'failed – retrying':s.live?'making…':'would be made')+'</span>')+'</span></div>'+
     (op?'<div class="qb"><div class="mut" style="margin-top:6px">'+esc(r.customer)+' · '+esc(r.time)+(r.status=='updated'?' · changed after it was made':'')+'</div>'+linesTable(r.lines)+
     (r.notes.length?'<div class="note">Notes: '+esc(r.notes.join(' · '))+'</div>':'')+(r.warns.length?'<div class="w">⚠ '+esc(r.warns.join(' · '))+'</div>':'')+(r.dup?'<div class="w b">⚠ Possible duplicate: '+esc(r.dup)+'</div>':'')+(r.status=='alert'?'<div class="w b">⚠ Confirmed in Odoo – it was not changed there. Check it by hand.</div>':'')+(r.status=='deleted'?'<div class="w b">⚠ '+esc(r.so)+' was deleted in Odoo. The app leaves it alone. <button class="sm" onclick="remake(S.rows['+ri+'].key)">Make again</button></div>':'')+
     '<div class="bar" style="margin-top:7px"><button class="sm pri" onclick="openEdit(S.rows['+ri+'].msgs)">Edit</button>'+
-    (r.so&&s.driver_opts.length?'<select onchange="setDrv(S.rows['+ri+'].key,this.value)"><option value="">'+(r.driver?'Driver: '+esc(r.driver):'Driver…')+'</option>'+s.driver_opts.map(o=>'<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>').join('')+'</select>':'')+
+    (r.so&&!r.driver&&r.usual&&(s.driver_opts||[]).some(o=>o.name==r.usual)?'<button class="pri sm" onclick="event.stopPropagation();setDrv(S.rows['+ri+'].key,(S.driver_opts.find(o=>o.name==S.rows['+ri+'].usual)||{}).id)">Usual: '+esc(r.usual)+' ✓</button> ':'')+(r.so&&s.driver_opts.length?'<select onchange="setDrv(S.rows['+ri+'].key,this.value)"><option value="">'+(r.driver?'Driver: '+esc(r.driver):'Driver…')+'</option>'+s.driver_opts.map(o=>'<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>').join('')+'</select>':'')+
     r.msgs.map((id,k)=>'<button class="sm del" onclick="cancel(\''+esc(id)+'\',true)">Cancel '+esc(r.tokens[k])+'</button>').join('')+'</div></div>':'')+'</div>'}).join('')||'<div class="mut">'+(q?'Nothing found.':'No quotations for this day'+(FLT!='all'?' with this filter':'')+'.')+'</div>';
   const other=q?s.other.filter(o=>(o.cust+' '+o.po+' '+o.token).toLowerCase().includes(q)):s.other.filter(o=>o.date==DAY||o.status=='pending');
   $('oc').textContent=other.length?'('+other.length+')':'';
@@ -231,16 +237,20 @@ async function setDrv(key,val){if(val)render(await api('/api/driver',{key,val}))
 async function notName(i){const m=window._pend[i];
   const msg=m.kind=='customer'?'“'+m.raw+'” is NOT a customer?\n\nOrders read with this name are skipped (no quotation), now and every next time.\nIf it was a real order written wrongly, use Edit on it to put the right customer.\nYou can undo it in the Names tab.'
     :'“'+m.raw+'” is NOT a product?\n\nThis line is skipped (the rest of the order goes on), now and every next time.\nYou can undo it in the Names tab.';
+  if(m.drv&&!confirm('This name is then skipped in every drivers message too. OK?'))return;
   if(!confirm(msg))return;render(await api('/api/notname',{kind:m.kind,raw:m.raw,on:true}))}
 async function saveMap(i){const m=window._pend[i];render(await api('/api/map',{kind:m.kind,raw:m.raw,id:m.suggest.id,name:m.suggest.name}))}
 
 /* ---------- match window (orders, names, inventory) ---------- */
+function openOnce(i){openM({..._pend[i],only:_pend[i].ids});$('ms').textContent='Pick the customer for '+(_pend[i].ids.length>1?'these orders':'this order')+' only. It is NOT remembered: the next order with this name asks again.'}
 function openM(m){M=m;$('mt').textContent=m.raw;$('ms').textContent='Pick the '+(m.kind=='customer'?'customer':'product')+' in Odoo. It is remembered.';
   $('mq').value=String(m.raw).split(' ').slice(0,2).join(' ');$('res').innerHTML='';$('ov').style.display='flex';srch()}
 function closeM(){$('ov').style.display='none'}
 async function srch(){const j=await api('/api/search?kind='+M.kind+'&q='+encodeURIComponent($('mq').value));window._res=j.results;
   $('res').innerHTML=j.results.map((r,k)=>'<button onclick="pick('+k+')">'+esc(r.name)+'</button>').join('')||'<div class="mut" style="margin-top:8px">Nothing found.</div>'}
-async function pick(k){const r=window._res[k];const j=await api('/api/map',{kind:M.kind,raw:M.raw,id:r.id,name:r.name});closeM();
+async function pick(k){const r=window._res[k];
+  if(M.only){const j=await api('/api/setcust',{ids:M.only,id:r.id,name:r.name});closeM();return render(j)}
+  const j=await api('/api/map',{kind:M.kind,raw:M.raw,id:r.id,name:r.name});closeM();
   if(M.kind=='inventory')return invPreview(false);
   if(curTab()=='names')return loadNames();
   render(j)}
