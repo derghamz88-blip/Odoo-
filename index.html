@@ -67,6 +67,7 @@ details[open] summary{margin-bottom:8px}.el input{width:100%}.el td{border:0;pad
 <div id="pendw"><h2>Names to match <span id="pc"></span></h2><div id="pend"></div></div>
 <div id="dpendw" style="display:none"><h2>🚚 Driver names to match <span id="dpc"></span></h2><div class="mut" style="margin-bottom:6px">Names from the drivers message (IAT Orders spelling). Match each one once; it is kept for good and the driver goes on its quotation.</div><div id="dpend"></div></div>
 <h2>Quotations <span id="qc"></span></h2><div id="rows"></div>
+<div id="trw" style="display:none"><h2>🚛 Truck loads <span id="trc"></span></h2><div id="trk"></div></div>
 <h2>Orders without a quotation <span id="oc"></span></h2><div id="other"></div>
 <h2>Drivers not placed <span id="dc"></span></h2><div id="drv"></div>
 <details style="margin-top:16px"><summary>Messages that were not read as orders</summary><div id="unread" class="card log"></div></details>
@@ -76,11 +77,12 @@ details[open] summary{margin-bottom:8px}.el input{width:100%}.el td{border:0;pad
 
 <section id="t-add" class="tab">
 <h2>Paste a message</h2><div class="mut" style="margin-bottom:6px">For an order, a date message or a drivers message that did not come from WhatsApp.</div>
-<div class="card"><div class="bar"><select id="pg"><option value="nextday">Next Day group</option><option value="tender">Tender group</option><option value="fresh">Fresh group</option><option value="drivers">Drivers message</option></select>
+<div class="card"><div class="bar"><select id="pg"><option value="nextday">Next Day group</option><option value="tender">Tender group</option><option value="fresh">Fresh group</option><option value="drivers">Drivers message</option><option value="truck">Truck load</option></select>
 <button class="pri" onclick="paste()">Read it</button><button onclick="clearTest()">Clear test messages</button></div>
 <textarea id="pt" style="margin-top:8px" placeholder="Paste one message (customer on the first line). Several messages: put a line with --- between them."></textarea>
 </div><h2>Date of next-day / tender orders</h2><div class="card"><div class="mut" id="dnow" style="margin-bottom:6px"></div><div class="bar"><span class="mut">Date:</span><input type="date" id="dt"><button onclick="setDate()">Set</button></div>
 <div class="bar" style="margin-top:6px"><label class="mut"><input type="checkbox" id="dmv"> also move next-day/tender orders received since</label><input type="datetime-local" id="dsince"></div></div>
+<h2>🚛 Trucks</h2><div class="card"><div class="mut" style="margin-bottom:6px">Each driver and his truck. A message in the truck-loads group starts with the driver name, then the products: it becomes a Truck Sale (Draft) on that truck.</div><div id="trset"><button class="sm" onclick="loadTrucks()">Show trucks</button></div></div>
 <h2>Settings</h2><div class="card">
 <label class="bar"><input type="checkbox" id="sa" onchange="saveSet({alerts_wa:this.checked})"> <span>WhatsApp alerts from the bot (new name to match, failed quotation, cancelled order with a confirmed quotation)</span></label>
 <div class="bar" style="margin-top:8px"><span class="mut">Daily report on WhatsApp at</span><input type="time" id="srt"><button onclick="saveSet({report_time:$('srt').value})">Save</button><button onclick="saveSet({report_time:''});$('srt').value=''">Off</button></div>
@@ -141,10 +143,11 @@ function render(s){S=s;showErr(s.odoo_error?('Odoo: '+s.odoo_error):'');
     (s.alerts.length?'<div style="text-align:right;margin-bottom:8px"><button class="sm" onclick="clearAlerts()">Clear alerts</button></div>':'');
   const seen={},pend=[];
   s.other.forEach(o=>(o.missing||[]).forEach(m=>{const k=m.kind+'|'+m.raw;if(!seen[k]){seen[k]={...m,ids:[],where:o.token+' '+o.cust};pend.push(seen[k])}else if(seen[k].ids&&!seen[k].drv)seen[k].where+=', '+o.token;if(seen[k].ids)seen[k].ids.push(o.id)}));
+  (s.truck_miss||[]).forEach(m=>{const k=m.kind+'|'+m.raw;if(!seen[k]){seen[k]={...m};pend.push(seen[k])}});
   const n0=pend.length;
   (s.drv_miss||[]).forEach(m=>{const k=m.kind+'|'+m.raw;if(!seen[k]){seen[k]=1;pend.push({...m,drv:1,where:'drivers message '+m.date+' · '+m.driver})}});
   const card=(m,i)=>'<div class="card"><div class="top"><span class="tag">'+(m.drv?'🚚 driver list':m.kind)+'</span><b>'+esc(m.raw)+'</b><span class="mut">'+esc(m.where)+'</span></div><div class="bar" style="margin-top:6px">'+
-    (m.suggest?'<button class="pri sm" onclick="saveMap('+i+')">It is “'+esc(m.suggest.name)+'”</button>':'')+'<button class="sm" onclick="openM(_pend['+i+'])">Match in Odoo</button>'+(m.kind=='customer'&&!m.drv&&m.ids&&m.ids.length?'<button class="sm" onclick="openOnce('+i+')">'+(m.ids.length>1?'Only these '+m.ids.length+' orders…':'Only this order…')+'</button>':'')+'<button class="sm del" onclick="notName('+i+')">✗ Not a '+m.kind+'</button></div></div>';
+    (m.suggest?'<button class="pri sm" onclick="saveMap('+i+')">It is “'+esc(m.suggest.name)+'”</button>':'')+'<button class="sm" onclick="openM(_pend['+i+'])">Match in Odoo</button>'+(!m.drv&&m.ids&&m.ids.length?'<button class="sm" onclick="openOnce('+i+')">'+(m.ids.length>1?'Only these '+m.ids.length+' orders…':'Only this order…')+'</button>':'')+'<button class="sm del" onclick="notName('+i+')">✗ Not a '+m.kind+'</button></div></div>';
   $('pc').textContent=n0?'('+n0+')':'';
   $('pend').innerHTML=pend.slice(0,n0).map(card).join('')||'<div class="mut">None.</div>';
   const nd=pend.length-n0;$('dpc').textContent=nd?'('+nd+')':'';
@@ -201,6 +204,13 @@ function draw(){const s=S;if(!s)return;s.rows.forEach(r=>{if(r.status=='deleted'
     '<div class="bar" style="margin-top:7px"><button class="sm pri" onclick="openEdit(S.rows['+ri+'].msgs)">Edit</button>'+
     (r.so&&!r.driver&&r.usual&&(s.driver_opts||[]).some(o=>o.name==r.usual)?'<button class="pri sm" onclick="event.stopPropagation();setDrv(S.rows['+ri+'].key,(S.driver_opts.find(o=>o.name==S.rows['+ri+'].usual)||{}).id)">Usual: '+esc(r.usual)+' ✓</button> ':'')+(r.so&&s.driver_opts.length?'<select onchange="setDrv(S.rows['+ri+'].key,this.value)"><option value="">'+(r.driver?'Driver: '+esc(r.driver):'Driver…')+'</option>'+s.driver_opts.map(o=>'<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>').join('')+'</select>':'')+
     r.msgs.map((id,k)=>'<button class="sm del" onclick="cancel(\''+esc(id)+'\',true)">Cancel '+esc(r.tokens[k])+'</button>').join('')+'</div></div>':'')+'</div>'}).join('')||'<div class="mut">'+(q?'Nothing found.':'No quotations for this day'+(FLT!='all'?' with this filter':'')+'.')+'</div>';
+  const trs=(s.trucks||[]).filter(t=>q?(t.driver+' '+t.name+' '+t.lines.join(' ')).toLowerCase().includes(q):t.date==DAY);
+  $('trw').style.display=trs.length?'':'none';$('trc').textContent=trs.length?'('+trs.length+')':'';
+  $('trk').innerHTML=trs.map(t=>'<div class="card"><div class="top"><b>'+esc(t.driver)+'</b>'+(t.truck?'<span class="tag">'+esc(t.truck)+'</span>':'')+'<span class="tag">'+esc(t.date)+'</span>'+
+    (t.name?(t.url?'<a href="'+esc(t.url)+'" target="_blank" style="margin-left:auto;font-weight:700">'+esc(t.name)+' ↗</a>':'<b style="margin-left:auto">'+esc(t.name)+'</b>'):'')+'<span class="would">'+esc(t.status)+'</span></div>'+
+    '<div class="mut">'+esc(t.lines.join(' · '))+' — '+esc(t.time)+'</div>'+
+    (t.why.length?'<div class="w">⚠ '+esc(t.why.join(' · '))+'</div>':'')+(t.warns.length?'<div class="w">⚠ '+esc(t.warns.join(' · '))+'</div>':'')+
+    '<div class="bar" style="margin-top:6px">'+(t.cancel?'<button class="sm" onclick="trCancel(\''+esc(t.id)+'\',false)">Restore</button>':'<button class="sm del" onclick="trCancel(\''+esc(t.id)+'\',true)">Cancel</button>')+'</div></div>').join('');
   const other=q?s.other.filter(o=>(o.cust+' '+o.po+' '+o.token).toLowerCase().includes(q)):s.other.filter(o=>o.date==DAY||o.status=='pending');
   $('oc').textContent=other.length?'('+other.length+')':'';
   $('other').innerHTML=other.map(o=>'<div class="card"><div class="top"><span class="tag">'+esc(o.token)+'</span><b>'+esc(o.cust)+'</b>'+(o.po?'<span class="tag">PO '+esc(o.po)+'</span>':'')+
@@ -209,6 +219,13 @@ function draw(){const s=S;if(!s)return;s.rows.forEach(r=>{if(r.status=='deleted'
     (o.status=='cancelled'||o.status=='existing'?'<button class="sm" onclick="cancel(\''+esc(o.id)+'\',false)">'+(o.status=='existing'?'Send it':'Restore')+'</button>':'<button class="sm del" onclick="cancel(\''+esc(o.id)+'\',true)">Cancel</button>')+'</div></div>').join('')+
     s.gone.filter(g=>g.status!='cancelled').map(g=>'<div class="card b">'+esc(g.name)+': cancel it by hand in Odoo</div>').join('')||'<div class="mut">None.</div>';
 }
+async function trCancel(id,on){if(on&&!confirm('Cancel this truck load? A Draft Truck Sale is removed from Odoo.'))return;render(await api('/api/truck_cancel',{id,on}))}
+let TRL=[];
+async function loadTrucks(){try{const j=await api('/api/truck_locs');TRL=j.locs;drawTrucks(j.cfg)}catch(e){showErr(e.message||e)}}
+function drawTrucks(cfg){window._tc=cfg.map(c=>({name:c.name,loc_id:c.loc_id}));const opt=v=>'<option value="">truck…</option>'+TRL.map(l=>'<option value="'+l.id+'"'+(l.id==v?' selected':'')+'>'+esc(l.name)+'</option>').join('');
+  $('trset').innerHTML=_tc.map((c,i)=>'<div class="bar" style="margin-bottom:6px"><input value="'+esc(c.name)+'" oninput="_tc['+i+'].name=this.value" style="width:140px"><select onchange="_tc['+i+'].loc_id=+this.value">'+opt(c.loc_id)+'</select><button class="sm del" onclick="_tc.splice('+i+',1);drawTrucks(_tc)">✗</button></div>').join('')+
+  '<div class="bar"><button class="sm" onclick="_tc.push({name:\'\',loc_id:0});drawTrucks(_tc)">+ Driver</button><button class="sm pri" onclick="saveTrucks()">Save</button></div><div class="mut" style="margin-top:4px">The driver name must be as in Odoo contacts (e.g. HABIB, KHALID).</div>'}
+async function saveTrucks(){try{await api('/api/trucks',{rows:_tc});await loadTrucks();alert('Saved.')}catch(e){showErr(e.message||e)}}
 async function remake(key){if(confirm('Make this quotation again in Odoo?'))render(await api('/api/remake',{key}))}
 let TOT=false;function togTot(){TOT=!TOT;draw()}
 function drawTot(rows){if(!TOT){$('tot').innerHTML='';return}const t={};rows.forEach(r=>r.lines.forEach(l=>{const k=l.name+'|'+l.uom;t[k]=(t[k]||0)+(+l.qty||0)}));
@@ -242,14 +259,14 @@ async function notName(i){const m=window._pend[i];
 async function saveMap(i){const m=window._pend[i];render(await api('/api/map',{kind:m.kind,raw:m.raw,id:m.suggest.id,name:m.suggest.name}))}
 
 /* ---------- match window (orders, names, inventory) ---------- */
-function openOnce(i){openM({..._pend[i],only:_pend[i].ids});$('ms').textContent='Pick the customer for '+(_pend[i].ids.length>1?'these orders':'this order')+' only. It is NOT remembered: the next order with this name asks again.'}
+function openOnce(i){openM({..._pend[i],only:_pend[i].ids});$('ms').textContent='Pick the '+_pend[i].kind+' for '+(_pend[i].ids.length>1?'these orders':'this order')+' only. It is NOT remembered: the next order with this name asks again.'}
 function openM(m){M=m;$('mt').textContent=m.raw;$('ms').textContent='Pick the '+(m.kind=='customer'?'customer':'product')+' in Odoo. It is remembered.';
   $('mq').value=String(m.raw).split(' ').slice(0,2).join(' ');$('res').innerHTML='';$('ov').style.display='flex';srch()}
 function closeM(){$('ov').style.display='none'}
 async function srch(){const j=await api('/api/search?kind='+M.kind+'&q='+encodeURIComponent($('mq').value));window._res=j.results;
   $('res').innerHTML=j.results.map((r,k)=>'<button onclick="pick('+k+')">'+esc(r.name)+'</button>').join('')||'<div class="mut" style="margin-top:8px">Nothing found.</div>'}
 async function pick(k){const r=window._res[k];
-  if(M.only){const j=await api('/api/setcust',{ids:M.only,id:r.id,name:r.name});closeM();return render(j)}
+  if(M.only){const j=await api('/api/setcust',{ids:M.only,kind:M.kind,raw:M.raw,id:r.id,name:r.name});closeM();return render(j)}
   const j=await api('/api/map',{kind:M.kind,raw:M.raw,id:r.id,name:r.name});closeM();
   if(M.kind=='inventory')return invPreview(false);
   if(curTab()=='names')return loadNames();
