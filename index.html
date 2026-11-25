@@ -210,7 +210,7 @@ function draw(){const s=S;if(!s)return;s.rows.forEach(r=>{if(r.status=='deleted'
     (t.name?(t.url?'<a href="'+esc(t.url)+'" target="_blank" style="margin-left:auto;font-weight:700">'+esc(t.name)+' ↗</a>':'<b style="margin-left:auto">'+esc(t.name)+'</b>'):'')+'<span class="would">'+esc(t.status)+'</span></div>'+
     '<div class="mut">'+esc(t.lines.join(' · '))+' — '+esc(t.time)+'</div>'+
     (t.why.length?'<div class="w">⚠ '+esc(t.why.join(' · '))+'</div>':'')+(t.warns.length?'<div class="w">⚠ '+esc(t.warns.join(' · '))+'</div>':'')+
-    '<div class="bar" style="margin-top:6px">'+(t.cancel?'<button class="sm" onclick="trCancel(\''+esc(t.id)+'\',false)">Restore</button>':'<button class="sm del" onclick="trCancel(\''+esc(t.id)+'\',true)">Cancel</button>')+'</div></div>').join('');
+    (['loaded','selling','closed','gone'].includes(t.status)?'':'<div class="bar" style="margin-top:6px">'+(t.cancel?'<button class="sm" onclick="trCancel(\''+esc(t.id)+'\',false)">Restore</button>':'<button class="sm del" onclick="trCancel(\''+esc(t.id)+'\',true)">Cancel</button>')+'</div>')+'</div>').join('');
   const other=q?s.other.filter(o=>(o.cust+' '+o.po+' '+o.token).toLowerCase().includes(q)):s.other.filter(o=>o.date==DAY||o.status=='pending');
   $('oc').textContent=other.length?'('+other.length+')':'';
   $('other').innerHTML=other.map(o=>'<div class="card"><div class="top"><span class="tag">'+esc(o.token)+'</span><b>'+esc(o.cust)+'</b>'+(o.po?'<span class="tag">PO '+esc(o.po)+'</span>':'')+
